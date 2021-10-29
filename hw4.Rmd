@@ -1,0 +1,79 @@
+---
+title: "hw4"
+output: html_document
+---
+## About the homework 4
+The task this week is to:
+
+Read in [global gender inequality data](http://hdr.undp.org/en/indicators/68606#)  
+Join the global gender inequality index to spatial data of the [World](https://hub.arcgis.com/datasets/2b93b06dc0dc4e809d3c8db5cb96ba69_0/explore?location=-0.133762%2C0.000000%2C1.00), creating a new column of difference in inequality between 2010 and 2019  
+Share it with the World on GitHub  
+Add you repository URL to the circulated spreadsheet  
+
+## 1. Load library 
+```{r}
+library(sf)
+library(sp)
+library(tidyverse)
+library(janitor)
+library(here)
+library(ggplot2)
+library(here)
+library(rgdal)
+library(tmap)
+library(RSQLite)
+library(countrycode)
+```
+
+## 2. Load gender inequality csv 
+
+```{r}
+gender <- read_csv(here::here('data',
+                        'Gender Inequality Index (GII).csv'),
+                   locale = locale(encoding = 'latin1'), skip=5,na='..')
+```
+
+## 3. Load world spatial data
+
+```{r}
+world <- st_read(here("Data", 
+                      "World_Countries_(Generalized)", 
+                      "World_Countries__Generalized_.shp"))
+```
+## 4. Data manipulation 
+* create a new variable contains country, 2019, 2010 data  
+* calculate the difference between 2010-2019  
+* create a new column contains countrycode so that can be joined to world spatial data
+
+```{r}
+genderDiffer <- gender %>% 
+  clean_names() %>% 
+  select(country,x2019,x2010) %>% 
+  mutate(differ=x2019-x2010) %>% 
+  slice(1:189,) %>% 
+  mutate(iso_code=countrycode(country,
+                              origin ='country.name', destination = 'iso2c' ))
+```
+
+* join csv to spatial data  
+```{r}
+genderJoin <- world %>% 
+  clean_names() %>% 
+  left_join(., genderDiffer,
+            by=c('aff_iso' = 'iso_code'))
+```
+
+## 5. Plot map 
+```{r}
+tmap_mode('plot')
+qtm(genderJoin,
+    fill='x2010')
+qtm(genderJoin,
+    fill='x2019')
+qtm(genderJoin,
+    fill='differ')
+
+```
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
